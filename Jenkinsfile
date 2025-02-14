@@ -2,63 +2,54 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
         DOCKER_IMAGE = "deeeeepal/flask-app"
+        DOCKER_CONTAINER_NAME = "flask-app"
     }
 
     stages {
-        // Stage 1: Checkout Code
         stage('Checkout Code') {
             steps {
-                checkout scm
+                git branch: 'main', credentialsId: 'your-git-credentials-id', url: 'https://github.com/Deepal05/flask-cd-pipeline.git'
             }
         }
 
-        // Stage 2: Build Docker Image
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build("${DOCKER_IMAGE}:${env.BUILD_ID}")
+                    bat 'docker build -t $DOCKER_IMAGE .'
                 }
             }
         }
 
-        // Stage 3: Run Tests
         stage('Run Tests') {
             steps {
                 script {
-                    docker.image("${DOCKER_IMAGE}:${env.BUILD_ID}").inside {
-                        bat 'python -m pytest tests/'
-                    }
+                    bat 'docker run --rm $DOCKER_IMAGE pytest tests/'
                 }
             }
         }
 
-        // Stage 4: Push Image to Docker Hub (Optional)
-        stage('Push Image') {
+        stage('Push Image to Docker Hub') {
             when {
-                expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+                expression { return env.BRANCH_NAME == 'main' }
             }
             steps {
                 script {
-                    docker.withRegistry('https://registry.hub.docker.com', DOCKERHUB_CREDENTIALS) {
-                        docker.image("${DOCKER_IMAGE}:${env.BUILD_ID}").push()
+                    withDockerRegistry([credentialsId: 'docker-hub-credentials', url: '']) {
+                        bat 'docker push $DOCKER_IMAGE'
                     }
                 }
             }
         }
 
-        // Stage 5: Deploy to Localhost
-        stage('Deploy to Localhost') {
+        stage('Deploy Application') {
             steps {
                 script {
-            // Pass environment variables to docker-compose
-                    sh """
-                        export DOCKER_IMAGE=${DOCKER_IMAGE}
-                        export BUILD_ID=${env.BUILD_ID}
-                        docker-compose -p flask-app down
-                        docker-compose -p flask-app up -d
-                    """
+                    bat '''
+                    docker stop $DOCKER_CONTAINER_NAME || true
+                    docker rm $DOCKER_CONTAINER_NAME || true
+                    docker run -d -p 5000:5000 --name $DOCKER_CONTAINER_NAME $DOCKER_IMAGE
+                    '''
                 }
             }
         }
