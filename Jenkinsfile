@@ -2,14 +2,14 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "your-dockerhub-username/flask-app"
+        DOCKER_IMAGE = "deeeeepal/flask-app"
         DOCKER_CREDENTIALS_ID = "docker-hub-credentials"
     }
 
     stages {
         stage('Checkout Code') {
             steps {
-                git credentialsId: 'github-credentials', url: 'https://github.com/yourusername/flask-cd-pipeline.git', branch: 'main'
+                git credentialsId: 'github-credentials', url: 'https://github.com/Deepal05/flask-cd-pipeline.git', branch: 'main'
             }
         }
 
