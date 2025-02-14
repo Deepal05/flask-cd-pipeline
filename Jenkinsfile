@@ -4,7 +4,6 @@ pipeline {
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
         DOCKER_IMAGE = "deeeeepal/flask-app"
-        REMOTE_SSH = credentials('remote-server-ssh')
     }
 
     stages {
@@ -35,7 +34,7 @@ pipeline {
             }
         }
 
-        // Stage 4: Push Image to Docker Hub
+        // Stage 4: Push Image to Docker Hub (Optional)
         stage('Push Image') {
             when {
                 expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
@@ -49,19 +48,14 @@ pipeline {
             }
         }
 
-        // Stage 5: Deploy Application
-        stage('Deploy') {
+        // Stage 5: Deploy to Localhost
+        stage('Deploy to Localhost') {
             steps {
                 script {
-                    sshagent([REMOTE_SSH]) {
-                        bat """
-                            ssh -o StrictHostKeyChecking=no ${REMOTE_SSH_USR}@your-server-ip '
-                                docker-compose down && \
-                                docker-compose pull && \
-                                docker-compose up -d
-                            '
-                        """
-                    }
+                    bat """
+                        docker-compose -p flask-app down
+                        docker-compose -p flask-app up -d
+                    """
                 }
             }
         }
