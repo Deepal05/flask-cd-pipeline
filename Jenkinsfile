@@ -2,63 +2,45 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "deeeeepal/flask-app"
-        DOCKER_CREDENTIALS_ID = "docker-hub-credentials"
+        DOCKER_IMAGE = 'deeeeepal/flask-app'
+        DOCKER_TAG = 'latest'
     }
 
     stages {
         stage('Checkout Code') {
             steps {
-                git credentialsId: 'github-credentials', url: 'https://github.com/Deepal05/flask-cd-pipeline.git', branch: 'main'
+                git branch: 'main', url: 'https://github.com/Deepal05/flask-cd-pipeline.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    bat "docker build -t $DOCKER_IMAGE:latest ."
-                }
+                sh 'docker build -t $DOCKER_IMAGE:$DOCKER_TAG .'
             }
         }
 
         stage('Run Tests') {
             steps {
-                script {
-                    bat "docker run --rm $DOCKER_IMAGE:latest pytest test_app.py"
-                }
+                sh 'docker run --rm $DOCKER_IMAGE:$DOCKER_TAG python -m unittest discover'
             }
         }
 
         stage('Push Image to Docker Hub') {
             steps {
-                script {
-                    docker.withRegistry('https://index.docker.io/v1/', DOCKER_CREDENTIALS_ID) {
-                        bat "docker push $DOCKER_IMAGE:latest"
-                    }
+                withDockerRegistry([credentialsId: 'docker-hub-credentials', url: '']) {
+                    sh 'docker push $DOCKER_IMAGE:$DOCKER_TAG'
                 }
             }
         }
 
         stage('Deploy Application') {
             steps {
-                sshagent(['your-server-ssh-key']) {
-                    script {
-                        bat """
-                            ssh -o StrictHostKeyChecking=no user@your-server 'docker pull $DOCKER_IMAGE:latest &&
-                            docker-compose up -d'
-                        """
-                    }
-                }
+                sh '''
+                docker-compose down
+                docker-compose pull
+                docker-compose up -d
+                '''
             }
-        }
-    }
-
-    post {
-        success {
-            echo "Deployment Successful!"
-        }
-        failure {
-            echo "Deployment Failed!"
         }
     }
 }
