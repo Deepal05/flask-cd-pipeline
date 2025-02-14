@@ -42,10 +42,12 @@ pipeline {
         stage('Deploy Application') {
             steps {
                 sshagent(['your-server-ssh-key']) {
-                    bat """
-                        ssh user@your-server 'docker pull $DOCKER_IMAGE:latest &&
-                        docker-compose up -d'
-                    """
+                    script {
+                        bat """
+                            ssh -o StrictHostKeyChecking=no user@your-server 'docker pull $DOCKER_IMAGE:latest &&
+                            docker-compose up -d'
+                        """
+                    }
                 }
             }
         }
