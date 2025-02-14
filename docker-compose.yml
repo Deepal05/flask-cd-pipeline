@@ -1,7 +1,7 @@
 version: '3'
 services:
   flask-app:
-    image: your-dockerhub-username/flask-app
+    image: deeeeepal/flask-app
     container_name: flask_container
     ports:
       - "5000:5000"
