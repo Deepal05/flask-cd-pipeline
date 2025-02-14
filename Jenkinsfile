@@ -41,11 +41,10 @@ pipeline {
 
         stage('Deploy Application') {
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'your-server-ssh-key', keyFileVariable: 'SSH_KEY')]) {
+                sshagent(['your-server-ssh-key']) {
                     script {
                         bat """
-                            set SSH_KEY_PATH=%SSH_KEY%
-                            ssh -o StrictHostKeyChecking=no -i %SSH_KEY_PATH% user@your-server 'docker pull $DOCKER_IMAGE:latest &&
+                            ssh -o StrictHostKeyChecking=no user@your-server 'docker pull $DOCKER_IMAGE:latest &&
                             docker-compose up -d'
                         """
                     }
