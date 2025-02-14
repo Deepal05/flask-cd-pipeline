@@ -2,52 +2,66 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials')
-        DOCKER_IMAGE_NAME = 'deeeeepal/flask-app'
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
+        DOCKER_IMAGE = "deeeeepal/flask-app"
+        REMOTE_SSH = credentials('remote-server-ssh')
     }
 
     stages {
+        // Stage 1: Checkout Code
         stage('Checkout Code') {
             steps {
-                git branch: 'main', url: 'https://github.com/Deepal05/flask-cd-pipeline.git'
+                checkout scm
             }
         }
 
+        // Stage 2: Build Docker Image
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build("${DOCKER_IMAGE_NAME}:${env.BUILD_NUMBER}")
+                    docker.build("${DOCKER_IMAGE}:${env.BUILD_ID}")
                 }
             }
         }
 
+        // Stage 3: Run Tests
         stage('Run Tests') {
             steps {
                 script {
-                    docker.image("${DOCKER_IMAGE_NAME}:${env.BUILD_NUMBER}").inside {
-                        sh 'python -m pytest test_app.py'
+                    docker.image("${DOCKER_IMAGE}:${env.BUILD_ID}").inside {
+                        bat 'python -m pytest tests/'
                     }
                 }
             }
         }
 
-        stage('Push Image to Docker Hub') {
+        // Stage 4: Push Image to Docker Hub
+        stage('Push Image') {
+            when {
+                expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+            }
             steps {
                 script {
-                    docker.withRegistry('https://registry.hub.docker.com', DOCKER_HUB_CREDENTIALS) {
-                        docker.image("${DOCKER_IMAGE_NAME}:${env.BUILD_NUMBER}").push()
+                    docker.withRegistry('https://registry.hub.docker.com', DOCKERHUB_CREDENTIALS) {
+                        docker.image("${DOCKER_IMAGE}:${env.BUILD_ID}").push()
                     }
                 }
             }
         }
 
-        stage('Deploy Application') {
+        // Stage 5: Deploy Application
+        stage('Deploy') {
             steps {
-                sshagent(['remote-server-credentials']) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no user@remote-server \
-                        'docker-compose down && docker-compose pull && docker-compose up -d'
-                    """
+                script {
+                    sshagent([REMOTE_SSH]) {
+                        bat """
+                            ssh -o StrictHostKeyChecking=no ${REMOTE_SSH_USR}@your-server-ip '
+                                docker-compose down && \
+                                docker-compose pull && \
+                                docker-compose up -d
+                            '
+                        """
+                    }
                 }
             }
         }
