@@ -1,0 +1,62 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = "your-dockerhub-username/flask-app"
+        DOCKER_CREDENTIALS_ID = "docker-hub-credentials"
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git credentialsId: 'github-credentials', url: 'https://github.com/yourusername/flask-cd-pipeline.git', branch: 'main'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    bat "docker build -t $DOCKER_IMAGE:latest ."
+                }
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                script {
+                    bat "docker run --rm $DOCKER_IMAGE:latest pytest test_app.py"
+                }
+            }
+        }
+
+        stage('Push Image to Docker Hub') {
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', DOCKER_CREDENTIALS_ID) {
+                        bat "docker push $DOCKER_IMAGE:latest"
+                    }
+                }
+            }
+        }
+
+        stage('Deploy Application') {
+            steps {
+                sshagent(['your-server-ssh-key']) {
+                    bat """
+                        ssh user@your-server 'docker pull $DOCKER_IMAGE:latest &&
+                        docker-compose up -d'
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Deployment Successful!"
+        }
+        failure {
+            echo "Deployment Failed!"
+        }
+    }
+}
