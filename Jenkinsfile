@@ -52,7 +52,10 @@ pipeline {
         stage('Deploy to Localhost') {
             steps {
                 script {
-                    bat """
+            // Pass environment variables to docker-compose
+                    sh """
+                        export DOCKER_IMAGE=${DOCKER_IMAGE}
+                        export BUILD_ID=${env.BUILD_ID}
                         docker-compose -p flask-app down
                         docker-compose -p flask-app up -d
                     """
