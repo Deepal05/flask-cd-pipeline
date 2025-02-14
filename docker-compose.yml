@@ -1,9 +1,11 @@
-version: '3'
+version: '3.8'
 
 services:
-  flask-app:
-    image: deeeeepal/flask-app:latest
+  web:
+    image: deeeeepal/flask-app:${BUILD_NUMBER}
     container_name: flask-app
     ports:
       - "5000:5000"
+    environment:
+      FLASK_APP: app.py
     restart: always
