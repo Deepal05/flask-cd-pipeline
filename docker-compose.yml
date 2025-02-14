@@ -1,8 +1,9 @@
 version: '3'
+
 services:
   flask-app:
-    image: deeeeepal/flask-app
-    container_name: flask_container
+    image: deeeeepal/flask-app:latest
+    container_name: flask-app
     ports:
       - "5000:5000"
     restart: always
